@@ -1,5 +1,6 @@
-import * as THREE from 'three'
+import * as THREE from "three";
 import { ARButton } from "three/examples/jsm/Addons.js";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 document.addEventListener("DOMContentLoaded", () => {
   const initialize = async () => {
@@ -33,18 +34,33 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const controller = renderer.xr.getController(0);
     scene.add(controller);
+
+    const loader = new GLTFLoader();
+
+    // Function to load and place the model
+    const loadModel = (position) => {
+      loader.load(
+        "./models/storage_bench.glb", // Update with the correct model path
+        (gltf) => {
+          const model = gltf.scene;
+          model.position.copy(position);
+          model.scale.set(0.08, 0.08, 0.08); // Adjust scale as needed
+          scene.add(model);
+        },
+        undefined,
+        (error) => console.error("Error loading model:", error)
+      );
+    };
+
     controller.addEventListener("select", () => {
-      const geometry = new THREE.BoxGeometry(0.06, 0.06, 0.06);
-      const material = new THREE.MeshBasicMaterial({
-        color: 0xffffff * Math.random(),
-      });
-      const mesh = new THREE.Mesh(geometry, material);
-      mesh.position.setFromMatrixPosition(reticle.matrix);
-      mesh.scale.y = Math.random() * 2 + 1;
-      scene.add(mesh);
+      if (reticle.visible) {
+        const position = new THREE.Vector3();
+        position.setFromMatrixPosition(reticle.matrix);
+        loadModel(position);
+      }
     });
 
-    renderer.xr.addEventListener("sessionstart", async (e) => {
+    renderer.xr.addEventListener("sessionstart", async () => {
       const session = renderer.xr.getSession();
       const viewerReferenceSpace = await session.requestReferenceSpace(
         "viewer"
@@ -60,7 +76,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (hitTestResults.length) {
           const hit = hitTestResults[0];
-          const referenceSpace = renderer.xr.getReferenceSpace(); // ARButton requested 'local' reference space
+          const referenceSpace = renderer.xr.getReferenceSpace();
           const hitPose = hit.getPose(referenceSpace);
 
           reticle.visible = true;
