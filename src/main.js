@@ -50,7 +50,7 @@ document.addEventListener("DOMContentLoaded", () => {
           const modelHeight = bbox.max.y - bbox.min.y;
 
           // Adjust y-position to place the base on the ring
-          model.position.y += bbox.min.y;
+          model.position.y += bbox.min.y/2;
 
           scene.add(model);
         },
