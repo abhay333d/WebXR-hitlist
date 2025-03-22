@@ -81,18 +81,20 @@ document.addEventListener("DOMContentLoaded", () => {
     Object.values(textureSets).forEach((textures) => {
       Object.values(textures).forEach((texture) => {
         texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-        texture.repeat.set(2, 2);
+        texture.repeat.set(5, 5); // Increase tiling to make texture cover larger areas
       });
     });
 
-    // Create floor plane
-    const floorGeometry = new THREE.PlaneGeometry(3, 3);
+    // Create floor plane (Larger Size)
+    const floorSize = 10; // Increase the size to cover the whole screen
+    const floorGeometry = new THREE.PlaneGeometry(floorSize, floorSize);
     const floorMaterial = new THREE.MeshStandardMaterial({
       map: textureSets.wood.map,
       normalMap: textureSets.wood.normalMap,
       displacementMap: textureSets.wood.displacementMap,
       aoMap: textureSets.wood.aoMap,
     });
+
     const floor = new THREE.Mesh(floorGeometry, floorMaterial);
     floor.rotation.x = -Math.PI / 2;
     floor.visible = false; // Initially hidden
@@ -105,13 +107,20 @@ document.addEventListener("DOMContentLoaded", () => {
       floorMaterial.normalMap = textures.normalMap;
       floorMaterial.displacementMap = textures.displacementMap;
       floorMaterial.aoMap = textures.aoMap;
+
+      // Apply larger tiling so textures cover more area
+      floorMaterial.map.repeat.set(5, 5);
+      floorMaterial.normalMap.repeat.set(5, 5);
+      floorMaterial.displacementMap.repeat.set(5, 5);
+      floorMaterial.aoMap.repeat.set(5, 5);
+
       floorMaterial.needsUpdate = true;
     };
 
-    // Create UI buttons for texture selection
+    // Create UI buttons for texture selection at the TOP
     const textureMenu = document.createElement("div");
     textureMenu.style.position = "absolute";
-    textureMenu.style.bottom = "10px";
+    textureMenu.style.top = "10px"; // Move menu to the top
     textureMenu.style.left = "50%";
     textureMenu.style.transform = "translateX(-50%)";
     textureMenu.style.display = "flex";
