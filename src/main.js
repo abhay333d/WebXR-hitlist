@@ -76,7 +76,7 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     });
 
-    // Create floor plane (Larger & No Displacement)
+    // Create floor plane (Larger & Properly Positioned)
     const floorSize = 10; // Large enough to cover the full screen
     const floorGeometry = new THREE.PlaneGeometry(floorSize, floorSize);
     const floorMaterial = new THREE.MeshStandardMaterial({
@@ -89,6 +89,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const floor = new THREE.Mesh(floorGeometry, floorMaterial);
     floor.rotation.x = -Math.PI / 2;
+    floor.position.y = -0.01; // Lowered the floor slightly
     floor.visible = false; // Initially hidden
     scene.add(floor);
 
@@ -153,9 +154,13 @@ document.addEventListener("DOMContentLoaded", () => {
           const hitPose = hit.getPose(referenceSpace);
 
           floor.visible = true;
-          floor.position.setFromMatrixPosition(
+          const newPosition = new THREE.Vector3().setFromMatrixPosition(
             new THREE.Matrix4().fromArray(hitPose.transform.matrix)
           );
+
+          // Adjust the Y-position to stick closer to the floor
+          newPosition.y -= 0.02; // Reduce floating effect
+          floor.position.copy(newPosition);
         } else {
           floor.visible = false;
         }
