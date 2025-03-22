@@ -35,46 +35,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const textureLoader = new THREE.TextureLoader();
     const textureSets = {
       brick: {
-        map: textureLoader.load(
-          "./textures/wood_floor_1k/textures/wood_floor_diff_1k.jpg"
-        ),
-        normalMap: textureLoader.load(
-          "./textures/wood_floor_1k/textures/wood_floor_nor_gl_1k.jpg"
-        ),
-        displacementMap: textureLoader.load(
-          "./textures/wood_floor_1k/textures/wood_floor_disp_1k.jpg"
-        ),
-        aoMap: textureLoader.load(
-          "./textures/wood_floor_1k/textures/wood_floor_arm_1k.jpg"
-        ),
+        map: textureLoader.load("./textures/brick_wall.jpg"),
       },
       concrete: {
-        map: textureLoader.load(
-          "./textures/stone_embedded_tiles_1k/textures/stone_embedded_tiles_diff_1k.jpg"
-        ),
-        normalMap: textureLoader.load(
-          "./textures/stone_embedded_tiles_1k/textures/stone_embedded_tiles_nor_gl_1k.jpg"
-        ),
-        displacementMap: textureLoader.load(
-          "./textures/stone_embedded_tiles_1k/textures/stone_embedded_tiles_disp_1k.jpg"
-        ),
-        aoMap: textureLoader.load(
-          "./textures/stone_embedded_tiles_1k/textures/stone_embedded_tiles_arm_1k.jpg"
-        ),
+        map: textureLoader.load("./textures/concrete_wall.jpg"),
       },
       wallpaper: {
-        map: textureLoader.load(
-          "./textures/grey_cartago/grey_cartago_01_diff_1k.jpg"
-        ),
-        normalMap: textureLoader.load(
-          "./textures/grey_cartago/grey_cartago_01_nor_gl_1k.jpg"
-        ),
-        displacementMap: textureLoader.load(
-          "./textures/grey_cartago/grey_cartago_01_disp_1k.jpg"
-        ),
-        aoMap: textureLoader.load(
-          "./textures/grey_cartago/grey_cartago_01_arm_1k.jpg"
-        ),
+        map: textureLoader.load("./textures/wallpaper.jpg"),
       },
     };
 
@@ -122,11 +89,9 @@ document.addEventListener("DOMContentLoaded", () => {
     // AR Hit Test
     renderer.xr.addEventListener("sessionstart", async () => {
       const session = renderer.xr.getSession();
-      const viewerReferenceSpace = await session.requestReferenceSpace(
-        "viewer"
-      );
+      const referenceSpace = await session.requestReferenceSpace("local-floor");
       const hitTestSource = await session.requestHitTestSource({
-        space: viewerReferenceSpace,
+        space: referenceSpace,
       });
 
       renderer.setAnimationLoop((timestamp, frame) => {
@@ -136,14 +101,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (hitTestResults.length) {
           const hit = hitTestResults[0];
-          const referenceSpace = renderer.xr.getReferenceSpace();
           const hitPose = hit.getPose(referenceSpace);
-
-          wall.visible = true;
-          wall.position.setFromMatrixPosition(
-            new THREE.Matrix4().fromArray(hitPose.transform.matrix)
+          const matrix = new THREE.Matrix4().fromArray(
+            hitPose.transform.matrix
           );
-          wall.rotation.y = Math.PI; // Ensure it aligns properly
+
+          // Extract normal vector to check if it's a vertical surface
+          const normal = new THREE.Vector3(
+            matrix.elements[4],
+            matrix.elements[5],
+            matrix.elements[6]
+          );
+          if (Math.abs(normal.y) < 0.5) {
+            // Ensuring it's a wall, not a floor
+            wall.visible = true;
+            wall.position.setFromMatrixPosition(matrix);
+            wall.rotation.set(0, Math.PI, 0); // Ensure correct orientation
+          }
         } else {
           wall.visible = false;
         }
