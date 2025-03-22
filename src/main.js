@@ -43,7 +43,7 @@ document.addEventListener("DOMContentLoaded", () => {
         (gltf) => {
           const model = gltf.scene;
           model.position.copy(position);
-          model.scale.set(0.7, 0.7, 0.7);
+          model.scale.set(1, 1, 1);
           scene.add(model);
         },
         undefined,
