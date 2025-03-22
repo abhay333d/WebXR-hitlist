@@ -13,7 +13,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const ringGeometry = new THREE.RingGeometry(0.15, 0.2, 32).rotateX(
       -Math.PI / 2
     );
-    const ringMaterial = new THREE.MeshBasicMaterial();
+    const ringMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
     const ring = new THREE.Mesh(ringGeometry, ringMaterial);
     ring.matrixAutoUpdate = false;
     ring.visible = false;
@@ -44,6 +44,14 @@ document.addEventListener("DOMContentLoaded", () => {
           const model = gltf.scene;
           model.position.copy(position);
           model.scale.set(0.5, 0.5, 0.5);
+
+          // Compute bounding box to adjust position
+          const bbox = new THREE.Box3().setFromObject(model);
+          const modelHeight = bbox.max.y - bbox.min.y;
+
+          // Adjust y-position to place the base on the ring
+          model.position.y -= bbox.min.y;
+
           scene.add(model);
         },
         undefined,
