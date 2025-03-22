@@ -43,7 +43,7 @@ document.addEventListener("DOMContentLoaded", () => {
         (gltf) => {
           const model = gltf.scene;
           model.position.copy(position);
-          model.scale.set(0.5, 0.5, 0.5);
+          model.scale.set(1, 1, 1);
 
           // Compute bounding box to adjust position
           const bbox = new THREE.Box3().setFromObject(model);
