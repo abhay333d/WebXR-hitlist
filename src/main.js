@@ -38,15 +38,42 @@ document.addEventListener("DOMContentLoaded", () => {
         map: textureLoader.load(
           "./textures/wood_floor_1k/textures/wood_floor_diff_1k.jpg"
         ),
+        normalMap: textureLoader.load(
+          "./textures/wood_floor_1k/textures/wood_floor_nor_gl_1k.jpg"
+        ),
+        displacementMap: textureLoader.load(
+          "./textures/wood_floor_1k/textures/wood_floor_disp_1k.jpg"
+        ),
+        aoMap: textureLoader.load(
+          "./textures/wood_floor_1k/textures/wood_floor_arm_1k.jpg"
+        ),
       },
       concrete: {
         map: textureLoader.load(
           "./textures/stone_embedded_tiles_1k/textures/stone_embedded_tiles_diff_1k.jpg"
         ),
+        normalMap: textureLoader.load(
+          "./textures/stone_embedded_tiles_1k/textures/stone_embedded_tiles_nor_gl_1k.jpg"
+        ),
+        displacementMap: textureLoader.load(
+          "./textures/stone_embedded_tiles_1k/textures/stone_embedded_tiles_disp_1k.jpg"
+        ),
+        aoMap: textureLoader.load(
+          "./textures/stone_embedded_tiles_1k/textures/stone_embedded_tiles_arm_1k.jpg"
+        ),
       },
       wallpaper: {
         map: textureLoader.load(
           "./textures/grey_cartago/grey_cartago_01_diff_1k.jpg"
+        ),
+        normalMap: textureLoader.load(
+          "./textures/grey_cartago/grey_cartago_01_nor_gl_1k.jpg"
+        ),
+        displacementMap: textureLoader.load(
+          "./textures/grey_cartago/grey_cartago_01_disp_1k.jpg"
+        ),
+        aoMap: textureLoader.load(
+          "./textures/grey_cartago/grey_cartago_01_arm_1k.jpg"
         ),
       },
     };
@@ -55,30 +82,20 @@ document.addEventListener("DOMContentLoaded", () => {
     const wallMaterial = new THREE.MeshStandardMaterial({
       map: textureSets.brick.map,
       transparent: true,
-      opacity: 1, // Fully visible wall
+      opacity: 0.6, // Semi-transparent wall
       side: THREE.DoubleSide,
     });
 
-    // Create a full-screen wall plane
-    let wallGeometry = new THREE.PlaneGeometry(2, 2);
+    // Wall Plane
+    const wallGeometry = new THREE.PlaneGeometry(5, 3);
     const wall = new THREE.Mesh(wallGeometry, wallMaterial);
+    wall.visible = false;
     scene.add(wall);
-
-    // Function to update wall size dynamically
-    const updateWallSize = () => {
-      const aspect = window.innerWidth / window.innerHeight;
-      wallGeometry.dispose();
-      wall.geometry = new THREE.PlaneGeometry(2 * aspect, 2);
-      wall.position.set(0, 0, -2);
-    };
-
-    updateWallSize();
-    window.addEventListener("resize", updateWallSize);
 
     // Change wall texture
     const changeTexture = (textureKey) => {
       wallMaterial.map = textureSets[textureKey].map;
-      wallMaterial.map.needsUpdate = true;
+      wallMaterial.needsUpdate = true;
     };
 
     // Texture Selection UI
@@ -102,8 +119,35 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.body.appendChild(textureMenu);
 
+    // AR Hit Test
     renderer.xr.addEventListener("sessionstart", async () => {
-      renderer.setAnimationLoop(() => {
+      const session = renderer.xr.getSession();
+      const viewerReferenceSpace = await session.requestReferenceSpace(
+        "viewer"
+      );
+      const hitTestSource = await session.requestHitTestSource({
+        space: viewerReferenceSpace,
+      });
+
+      renderer.setAnimationLoop((timestamp, frame) => {
+        if (!frame) return;
+
+        const hitTestResults = frame.getHitTestResults(hitTestSource);
+
+        if (hitTestResults.length) {
+          const hit = hitTestResults[0];
+          const referenceSpace = renderer.xr.getReferenceSpace();
+          const hitPose = hit.getPose(referenceSpace);
+
+          wall.visible = true;
+          wall.position.setFromMatrixPosition(
+            new THREE.Matrix4().fromArray(hitPose.transform.matrix)
+          );
+          wall.rotation.y = Math.PI; // Ensure it aligns properly
+        } else {
+          wall.visible = false;
+        }
+
         renderer.render(scene, camera);
       });
     });
