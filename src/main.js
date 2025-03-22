@@ -43,7 +43,15 @@ document.addEventListener("DOMContentLoaded", () => {
         (gltf) => {
           const model = gltf.scene;
           model.position.copy(position);
-          model.scale.set(1, 1, 1);
+          model.scale.set(0.8, 0.8, 0.8);
+
+          // Compute bounding box to adjust position
+          const bbox = new THREE.Box3().setFromObject(model);
+          const modelHeight = bbox.max.y - bbox.min.y;
+
+          // Adjust y-position to place the base on the ring
+          model.position.y -= bbox.min.y/4;
+
           scene.add(model);
         },
         undefined,
