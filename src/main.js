@@ -20,85 +20,41 @@ document.addEventListener("DOMContentLoaded", () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.xr.enabled = true;
 
-    const arButton = ARButton.createButton(renderer, {
-      requiredFeatures: ["hit-test"],
-      optionalFeatures: ["dom-overlay"],
-      domOverlay: { root: document.body },
-    });
     document.body.appendChild(renderer.domElement);
-    document.body.appendChild(arButton);
+    document.body.appendChild(ARButton.createButton(renderer));
 
-    const controller = renderer.xr.getController(0);
-    scene.add(controller);
-
-    // Load textures
     const textureLoader = new THREE.TextureLoader();
     const textureSets = {
-      brick: {
-        map: textureLoader.load(
-          "./textures/wood_floor_1k/textures/wood_floor_diff_1k.jpg"
-        ),
-        normalMap: textureLoader.load(
-          "./textures/wood_floor_1k/textures/wood_floor_nor_gl_1k.jpg"
-        ),
-        displacementMap: textureLoader.load(
-          "./textures/wood_floor_1k/textures/wood_floor_disp_1k.jpg"
-        ),
-        aoMap: textureLoader.load(
-          "./textures/wood_floor_1k/textures/wood_floor_arm_1k.jpg"
-        ),
-      },
-      concrete: {
-        map: textureLoader.load(
-          "./textures/stone_embedded_tiles_1k/textures/stone_embedded_tiles_diff_1k.jpg"
-        ),
-        normalMap: textureLoader.load(
-          "./textures/stone_embedded_tiles_1k/textures/stone_embedded_tiles_nor_gl_1k.jpg"
-        ),
-        displacementMap: textureLoader.load(
-          "./textures/stone_embedded_tiles_1k/textures/stone_embedded_tiles_disp_1k.jpg"
-        ),
-        aoMap: textureLoader.load(
-          "./textures/stone_embedded_tiles_1k/textures/stone_embedded_tiles_arm_1k.jpg"
-        ),
-      },
-      wallpaper: {
-        map: textureLoader.load(
-          "./textures/grey_cartago/grey_cartago_01_diff_1k.jpg"
-        ),
-        normalMap: textureLoader.load(
-          "./textures/grey_cartago/grey_cartago_01_nor_gl_1k.jpg"
-        ),
-        displacementMap: textureLoader.load(
-          "./textures/grey_cartago/grey_cartago_01_disp_1k.jpg"
-        ),
-        aoMap: textureLoader.load(
-          "./textures/grey_cartago/grey_cartago_01_arm_1k.jpg"
-        ),
-      },
+      wood: textureLoader.load("./textures/wood.jpg"),
+      marble: textureLoader.load("./textures/marble.jpg"),
+      tiles: textureLoader.load("./textures/tiles.jpg"),
     };
 
-    // Wall material with transparency
-    const wallMaterial = new THREE.MeshStandardMaterial({
-      map: textureSets.brick.map,
-      transparent: true,
-      opacity: 0.6, // Semi-transparent wall
-      side: THREE.DoubleSide,
+    Object.values(textureSets).forEach((texture) => {
+      texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
     });
 
-    // Wall Plane
-    const wallGeometry = new THREE.PlaneGeometry(5, 3);
-    const wall = new THREE.Mesh(wallGeometry, wallMaterial);
-    wall.visible = false;
-    scene.add(wall);
+    // Full-Screen Plane for Texture
+    const aspect = window.innerWidth / window.innerHeight;
+    const planeGeometry = new THREE.PlaneGeometry(2 * aspect, 2);
+    const planeMaterial = new THREE.MeshStandardMaterial({
+      map: textureSets.wood,
+      transparent: true, // Makes it slightly transparent
+      opacity: 0.8,
+    });
 
-    // Change wall texture
+    const screenPlane = new THREE.Mesh(planeGeometry, planeMaterial);
+    scene.add(screenPlane);
+
+    // Position the plane in front of the camera
+    screenPlane.position.z = -2;
+
     const changeTexture = (textureKey) => {
-      wallMaterial.map = textureSets[textureKey].map;
-      wallMaterial.needsUpdate = true;
+      planeMaterial.map = textureSets[textureKey];
+      planeMaterial.needsUpdate = true;
     };
 
-    // Texture Selection UI
+    // UI for Texture Selection
     const textureMenu = document.createElement("div");
     textureMenu.style.position = "absolute";
     textureMenu.style.top = "10px";
@@ -113,47 +69,20 @@ document.addEventListener("DOMContentLoaded", () => {
     Object.keys(textureSets).forEach((key) => {
       const button = document.createElement("button");
       button.innerText = key.charAt(0).toUpperCase() + key.slice(1);
+      button.style.padding = "8px";
+      button.style.border = "none";
+      button.style.cursor = "pointer";
+      button.style.background = "#ddd";
+      button.style.borderRadius = "5px";
       button.onclick = () => changeTexture(key);
       textureMenu.appendChild(button);
     });
 
     document.body.appendChild(textureMenu);
 
-    // AR Hit Test
-    renderer.xr.addEventListener("sessionstart", async () => {
-      const session = renderer.xr.getSession();
-      const viewerReferenceSpace = await session.requestReferenceSpace(
-        "viewer"
-      );
-      const hitTestSource = await session.requestHitTestSource({
-        space: viewerReferenceSpace,
-      });
-
-      renderer.setAnimationLoop((timestamp, frame) => {
-        if (!frame) return;
-
-        const hitTestResults = frame.getHitTestResults(hitTestSource);
-
-        if (hitTestResults.length) {
-          const hit = hitTestResults[0];
-          const referenceSpace = renderer.xr.getReferenceSpace();
-          const hitPose = hit.getPose(referenceSpace);
-
-          wall.visible = true;
-          wall.position.setFromMatrixPosition(
-            new THREE.Matrix4().fromArray(hitPose.transform.matrix)
-          );
-          wall.rotation.y = Math.PI; // Ensure it aligns properly
-        } else {
-          wall.visible = false;
-        }
-
-        renderer.render(scene, camera);
-      });
-    });
-
-    renderer.xr.addEventListener("sessionend", () => {
-      console.log("session end");
+    renderer.setAnimationLoop(() => {
+      screenPlane.quaternion.copy(camera.quaternion); // Make sure the plane always faces the camera
+      renderer.render(scene, camera);
     });
   };
 
