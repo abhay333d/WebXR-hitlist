@@ -41,19 +41,25 @@ document.addEventListener("DOMContentLoaded", () => {
         normalMap: textureLoader.load(
           "./textures/wood_floor_1k/textures/wood_floor_nor_gl_1k.jpg"
         ),
+        displacementMap: textureLoader.load(
+          "./textures/wood_floor_1k/textures/wood_floor_disp_1k.jpg"
+        ),
         aoMap: textureLoader.load(
           "./textures/wood_floor_1k/textures/wood_floor_arm_1k.jpg"
         ),
       },
       marble: {
         map: textureLoader.load(
-          "./textures/stone_embedded-tiles_1k/textures/stone_embedded_tiles_diff_1k.jpg"
+          "./textures/stone_embedded_tiles_1k/textures/stone_embedded_tiles_diff_1k.jpg"
         ),
         normalMap: textureLoader.load(
-          "./textures/stone_embedded-tiles_1k/textures/stone_embedded_tiles_nor_gl_1k.jpg"
+          "./textures/stone_embedded_tiles_1k/textures/stone_embedded_tiles_nor_gl_1k.jpg"
+        ),
+        displacementMap: textureLoader.load(
+          "./textures/stone_embedded_tiles_1k/textures/stone_embedded_tiles_disp_1k.jpg"
         ),
         aoMap: textureLoader.load(
-          "./textures/stone_embedded-tiles_1k/textures/stone_embedded_tiles_arm_1k.jpg"
+          "./textures/stone_embedded_tiles_1k/textures/stone_embedded_tiles_arm_1k.jpg"
         ),
       },
       tiles: {
@@ -62,6 +68,9 @@ document.addEventListener("DOMContentLoaded", () => {
         ),
         normalMap: textureLoader.load(
           "./textures/grey_cartago/grey_cartago_01_nor_gl_1k.jpg"
+        ),
+        displacementMap: textureLoader.load(
+          "./textures/grey_cartago/grey_cartago_01_disp_1k.jpg"
         ),
         aoMap: textureLoader.load(
           "./textures/grey_cartago/grey_cartago_01_arm_1k.jpg"
@@ -72,24 +81,22 @@ document.addEventListener("DOMContentLoaded", () => {
     Object.values(textureSets).forEach((textures) => {
       Object.values(textures).forEach((texture) => {
         texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-        texture.repeat.set(4, 4); // Adjusted tiling for better texture coverage
+        texture.repeat.set(5, 5); // Increase tiling to make texture cover larger areas
       });
     });
 
-    // Create floor plane (Larger & Properly Positioned)
-    const floorSize = 10; // Large enough to cover the full screen
+    // Create floor plane (Larger Size)
+    const floorSize = 10; // Increase the size to cover the whole screen
     const floorGeometry = new THREE.PlaneGeometry(floorSize, floorSize);
     const floorMaterial = new THREE.MeshStandardMaterial({
       map: textureSets.wood.map,
       normalMap: textureSets.wood.normalMap,
+      displacementMap: textureSets.wood.displacementMap,
       aoMap: textureSets.wood.aoMap,
-      side: THREE.DoubleSide, // Render both sides
-      flatShading: false, // Smooth out shading
     });
 
     const floor = new THREE.Mesh(floorGeometry, floorMaterial);
     floor.rotation.x = -Math.PI / 2;
-    floor.position.y = -0.01; // Lowered the floor slightly
     floor.visible = false; // Initially hidden
     scene.add(floor);
 
@@ -98,12 +105,14 @@ document.addEventListener("DOMContentLoaded", () => {
       const textures = textureSets[textureKey];
       floorMaterial.map = textures.map;
       floorMaterial.normalMap = textures.normalMap;
+      floorMaterial.displacementMap = textures.displacementMap;
       floorMaterial.aoMap = textures.aoMap;
 
-      // Apply correct UV scaling so it sticks to the floor
-      floorMaterial.map.repeat.set(4, 4);
-      floorMaterial.normalMap.repeat.set(4, 4);
-      floorMaterial.aoMap.repeat.set(4, 4);
+      // Apply larger tiling so textures cover more area
+      floorMaterial.map.repeat.set(5, 5);
+      floorMaterial.normalMap.repeat.set(5, 5);
+      floorMaterial.displacementMap.repeat.set(5, 5);
+      floorMaterial.aoMap.repeat.set(5, 5);
 
       floorMaterial.needsUpdate = true;
     };
@@ -154,13 +163,9 @@ document.addEventListener("DOMContentLoaded", () => {
           const hitPose = hit.getPose(referenceSpace);
 
           floor.visible = true;
-          const newPosition = new THREE.Vector3().setFromMatrixPosition(
+          floor.position.setFromMatrixPosition(
             new THREE.Matrix4().fromArray(hitPose.transform.matrix)
           );
-
-          // Adjust the Y-position to stick closer to the floor
-          newPosition.y -= 0.02; // Reduce floating effect
-          floor.position.copy(newPosition);
         } else {
           floor.visible = false;
         }
