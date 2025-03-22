@@ -1,19 +1,23 @@
 import * as THREE from "three";
 import { ARButton } from "three/examples/jsm/Addons.js";
+import { GLTFLoader } from "three/examples/jsm/Addons.js";
 
 document.addEventListener("DOMContentLoaded", () => {
   const initialize = async () => {
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(
-      75,
-      window.innerWidth / window.innerHeight,
-      0.1,
-      100
-    );
-    camera.position.set(0, 1.6, 3);
+    const camera = new THREE.PerspectiveCamera();
 
     const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
     scene.add(light);
+
+    const ringGeometry = new THREE.RingGeometry(0.15, 0.2, 32).rotateX(
+      -Math.PI / 2
+    );
+    const ringMaterial = new THREE.MeshBasicMaterial();
+    const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+    ring.matrixAutoUpdate = false;
+    ring.visible = false;
+    scene.add(ring);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(window.devicePixelRatio);
@@ -31,95 +35,30 @@ document.addEventListener("DOMContentLoaded", () => {
     const controller = renderer.xr.getController(0);
     scene.add(controller);
 
-    // Load textures
-    const textureLoader = new THREE.TextureLoader();
-    const textureSets = {
-      brick: {
-        map: textureLoader.load(
-          "./textures/wood_floor_1k/textures/wood_floor_diff_1k.jpg"
-        ),
-        normalMap: textureLoader.load(
-          "./textures/wood_floor_1k/textures/wood_floor_nor_gl_1k.jpg"
-        ),
-        displacementMap: textureLoader.load(
-          "./textures/wood_floor_1k/textures/wood_floor_disp_1k.jpg"
-        ),
-        aoMap: textureLoader.load(
-          "./textures/wood_floor_1k/textures/wood_floor_arm_1k.jpg"
-        ),
-      },
-      concrete: {
-        map: textureLoader.load(
-          "./textures/stone_embedded_tiles_1k/textures/stone_embedded_tiles_diff_1k.jpg"
-        ),
-        normalMap: textureLoader.load(
-          "./textures/stone_embedded_tiles_1k/textures/stone_embedded_tiles_nor_gl_1k.jpg"
-        ),
-        displacementMap: textureLoader.load(
-          "./textures/stone_embedded_tiles_1k/textures/stone_embedded_tiles_disp_1k.jpg"
-        ),
-        aoMap: textureLoader.load(
-          "./textures/stone_embedded_tiles_1k/textures/stone_embedded_tiles_arm_1k.jpg"
-        ),
-      },
-      wallpaper: {
-        map: textureLoader.load(
-          "./textures/grey_cartago/grey_cartago_01_diff_1k.jpg"
-        ),
-        normalMap: textureLoader.load(
-          "./textures/grey_cartago/grey_cartago_01_nor_gl_1k.jpg"
-        ),
-        displacementMap: textureLoader.load(
-          "./textures/grey_cartago/grey_cartago_01_disp_1k.jpg"
-        ),
-        aoMap: textureLoader.load(
-          "./textures/grey_cartago/grey_cartago_01_arm_1k.jpg"
-        ),
-      },
+    const loader = new GLTFLoader();
+
+    const loadModel = (position) => {
+      loader.load(
+        "./models/black_double_recliner_sofa.glb",
+        (gltf) => {
+          const model = gltf.scene;
+          model.position.copy(position);
+          model.scale.set(0.7, 0.7, 0.7);
+          scene.add(model);
+        },
+        undefined,
+        (error) => console.error("Error loading model:", error)
+      );
     };
 
-    // Wall material with transparency
-    const wallMaterial = new THREE.MeshStandardMaterial({
-      map: textureSets.brick.map,
-      transparent: true,
-      opacity: 0.6, // Semi-transparent wall
-      side: THREE.DoubleSide,
+    controller.addEventListener("select", () => {
+      if (ring.visible) {
+        const position = new THREE.Vector3();
+        position.setFromMatrixPosition(ring.matrix);
+        loadModel(position);
+      }
     });
 
-    // Wall Plane
-    const wallGeometry = new THREE.PlaneGeometry(5, 3);
-    const wall = new THREE.Mesh(wallGeometry, wallMaterial);
-    wall.visible = false;
-    scene.add(wall);
-
-    // Change wall texture
-    const changeTexture = (textureKey) => {
-      wallMaterial.map = textureSets[textureKey].map;
-      wallMaterial.needsUpdate = true;
-    };
-
-    // Texture Selection UI
-    const textureMenu = document.createElement("div");
-    textureMenu.style.position = "absolute";
-    textureMenu.style.top = "10px";
-    textureMenu.style.left = "50%";
-    textureMenu.style.transform = "translateX(-50%)";
-    textureMenu.style.display = "flex";
-    textureMenu.style.gap = "10px";
-    textureMenu.style.background = "rgba(255, 255, 255, 0.8)";
-    textureMenu.style.padding = "10px";
-    textureMenu.style.borderRadius = "10px";
-
-    Object.keys(textureSets).forEach((key) => {
-      const button = document.createElement("button");
-      button.innerText = key.charAt(0).toUpperCase() + key.slice(1);
-      button.onclick = () => changeTexture(key);
-      textureMenu.appendChild(button);
-    });
-
-    document.body.appendChild(textureMenu);
-
-    // AR Hit Test
     renderer.xr.addEventListener("sessionstart", async () => {
       const session = renderer.xr.getSession();
       const viewerReferenceSpace = await session.requestReferenceSpace(
@@ -139,13 +78,10 @@ document.addEventListener("DOMContentLoaded", () => {
           const referenceSpace = renderer.xr.getReferenceSpace();
           const hitPose = hit.getPose(referenceSpace);
 
-          wall.visible = true;
-          wall.position.setFromMatrixPosition(
-            new THREE.Matrix4().fromArray(hitPose.transform.matrix)
-          );
-          wall.rotation.y = Math.PI; // Ensure it aligns properly
+          ring.visible = true;
+          ring.matrix.fromArray(hitPose.transform.matrix);
         } else {
-          wall.visible = false;
+          ring.visible = false;
         }
 
         renderer.render(scene, camera);
