@@ -41,9 +41,6 @@ document.addEventListener("DOMContentLoaded", () => {
         normalMap: textureLoader.load(
           "./textures/wood_floor_1k/textures/wood_floor_nor_gl_1k.jpg"
         ),
-        displacementMap: textureLoader.load(
-          "./textures/wood_floor_1k/textures/wood_floor_disp_1k.jpg"
-        ),
         aoMap: textureLoader.load(
           "./textures/wood_floor_1k/textures/wood_floor_arm_1k.jpg"
         ),
@@ -54,9 +51,6 @@ document.addEventListener("DOMContentLoaded", () => {
         ),
         normalMap: textureLoader.load(
           "./textures/stone_embedded-tiles_1k/textures/stone_embedded_tiles_nor_gl_1k.jpg"
-        ),
-        displacementMap: textureLoader.load(
-          "./textures/stone_embedded-tiles_1k/textures/stone_embedded_tiles_disp_1k.jpg"
         ),
         aoMap: textureLoader.load(
           "./textures/stone_embedded-tiles_1k/textures/stone_embedded_tiles_arm_1k.jpg"
@@ -69,9 +63,6 @@ document.addEventListener("DOMContentLoaded", () => {
         normalMap: textureLoader.load(
           "./textures/grey_cartago/grey_cartago_01_nor_gl_1k.jpg"
         ),
-        displacementMap: textureLoader.load(
-          "./textures/grey_cartago/grey_cartago_01_disp_1k.jpg"
-        ),
         aoMap: textureLoader.load(
           "./textures/grey_cartago/grey_cartago_01_arm_1k.jpg"
         ),
@@ -81,18 +72,19 @@ document.addEventListener("DOMContentLoaded", () => {
     Object.values(textureSets).forEach((textures) => {
       Object.values(textures).forEach((texture) => {
         texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-        texture.repeat.set(5, 5); // Increase tiling to make texture cover larger areas
+        texture.repeat.set(4, 4); // Adjusted tiling for better texture coverage
       });
     });
 
-    // Create floor plane (Larger Size)
-    const floorSize = 10; // Increase the size to cover the whole screen
+    // Create floor plane (Larger & No Displacement)
+    const floorSize = 10; // Large enough to cover the full screen
     const floorGeometry = new THREE.PlaneGeometry(floorSize, floorSize);
     const floorMaterial = new THREE.MeshStandardMaterial({
       map: textureSets.wood.map,
       normalMap: textureSets.wood.normalMap,
-      displacementMap: textureSets.wood.displacementMap,
       aoMap: textureSets.wood.aoMap,
+      side: THREE.DoubleSide, // Render both sides
+      flatShading: false, // Smooth out shading
     });
 
     const floor = new THREE.Mesh(floorGeometry, floorMaterial);
@@ -105,14 +97,12 @@ document.addEventListener("DOMContentLoaded", () => {
       const textures = textureSets[textureKey];
       floorMaterial.map = textures.map;
       floorMaterial.normalMap = textures.normalMap;
-      floorMaterial.displacementMap = textures.displacementMap;
       floorMaterial.aoMap = textures.aoMap;
 
-      // Apply larger tiling so textures cover more area
-      floorMaterial.map.repeat.set(5, 5);
-      floorMaterial.normalMap.repeat.set(5, 5);
-      floorMaterial.displacementMap.repeat.set(5, 5);
-      floorMaterial.aoMap.repeat.set(5, 5);
+      // Apply correct UV scaling so it sticks to the floor
+      floorMaterial.map.repeat.set(4, 4);
+      floorMaterial.normalMap.repeat.set(4, 4);
+      floorMaterial.aoMap.repeat.set(4, 4);
 
       floorMaterial.needsUpdate = true;
     };
