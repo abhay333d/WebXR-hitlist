@@ -35,13 +35,46 @@ document.addEventListener("DOMContentLoaded", () => {
     const textureLoader = new THREE.TextureLoader();
     const textureSets = {
       brick: {
-        map: textureLoader.load("./textures/brick_wall.jpg"),
+        map: textureLoader.load(
+          "./textures/wood_floor_1k/textures/wood_floor_diff_1k.jpg"
+        ),
+        normalMap: textureLoader.load(
+          "./textures/wood_floor_1k/textures/wood_floor_nor_gl_1k.jpg"
+        ),
+        displacementMap: textureLoader.load(
+          "./textures/wood_floor_1k/textures/wood_floor_disp_1k.jpg"
+        ),
+        aoMap: textureLoader.load(
+          "./textures/wood_floor_1k/textures/wood_floor_arm_1k.jpg"
+        ),
       },
       concrete: {
-        map: textureLoader.load("./textures/concrete_wall.jpg"),
+        map: textureLoader.load(
+          "./textures/stone_embedded_tiles_1k/textures/stone_embedded_tiles_diff_1k.jpg"
+        ),
+        normalMap: textureLoader.load(
+          "./textures/stone_embedded_tiles_1k/textures/stone_embedded_tiles_nor_gl_1k.jpg"
+        ),
+        displacementMap: textureLoader.load(
+          "./textures/stone_embedded_tiles_1k/textures/stone_embedded_tiles_disp_1k.jpg"
+        ),
+        aoMap: textureLoader.load(
+          "./textures/stone_embedded_tiles_1k/textures/stone_embedded_tiles_arm_1k.jpg"
+        ),
       },
       wallpaper: {
-        map: textureLoader.load("./textures/wallpaper.jpg"),
+        map: textureLoader.load(
+          "./textures/grey_cartago/grey_cartago_01_diff_1k.jpg"
+        ),
+        normalMap: textureLoader.load(
+          "./textures/grey_cartago/grey_cartago_01_nor_gl_1k.jpg"
+        ),
+        displacementMap: textureLoader.load(
+          "./textures/grey_cartago/grey_cartago_01_disp_1k.jpg"
+        ),
+        aoMap: textureLoader.load(
+          "./textures/grey_cartago/grey_cartago_01_arm_1k.jpg"
+        ),
       },
     };
 
