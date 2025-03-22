@@ -10,47 +10,41 @@ document.addEventListener("DOMContentLoaded", () => {
     const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
     scene.add(light);
 
-    const reticleGeometry = new THREE.RingGeometry(0.15, 0.2, 32).rotateX(
-      -Math.PI / 2
-    );
-    const reticleMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-    const reticle = new THREE.Mesh(reticleGeometry, reticleMaterial);
-    reticle.matrixAutoUpdate = false;
-    reticle.visible = false;
-    scene.add(reticle);
-
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.xr.enabled = true;
 
-    const arButton = ARButton.createButton(renderer, {
-      requiredFeatures: ["hit-test"],
-      optionalFeatures: ["dom-overlay"],
-      domOverlay: { root: document.body },
-    });
     document.body.appendChild(renderer.domElement);
-    document.body.appendChild(arButton);
+    document.body.appendChild(ARButton.createButton(renderer));
 
     const controller = renderer.xr.getController(0);
     scene.add(controller);
 
-    const loader = new GLTFLoader();
+    let hitTestSource = null;
+    let hitTestSourceRequested = false;
 
-    // Function to create a virtual surface (floor, wall, ceiling)
+    const reticle = new THREE.Mesh(
+      new THREE.RingGeometry(0.15, 0.2, 32).rotateX(-Math.PI / 2),
+      new THREE.MeshBasicMaterial({ color: 0x00ff00 })
+    );
+    reticle.matrixAutoUpdate = false;
+    reticle.visible = false;
+    scene.add(reticle);
+
     const createSurface = (position, normal) => {
       let rotation = new THREE.Vector3();
       let color;
 
-      // Determine the type of surface based on normal direction
-      if (Math.abs(normal.y) > 0.9) {
-        // Floor or Ceiling
-        rotation.set(-Math.PI / 2, 0, 0);
-        color = normal.y > 0 ? 0x00ff00 : 0xff0000; // Green for floor, Red for ceiling
+      if (normal.y > 0.9) {
+        rotation.set(-Math.PI / 2, 0, 0); // Floor
+        color = 0x00ff00; // Green
+      } else if (normal.y < -0.9) {
+        rotation.set(Math.PI / 2, 0, 0); // Ceiling
+        color = 0xff0000; // Red
       } else {
-        // Walls (assuming mostly vertical)
-        rotation.set(0, Math.atan2(normal.x, normal.z), 0);
-        color = 0x0000ff; // Blue for walls
+        rotation.set(0, Math.atan2(normal.x, normal.z), 0); // Wall
+        color = 0x0000ff; // Blue
       }
 
       const geometry = new THREE.PlaneGeometry(2, 2);
@@ -63,54 +57,61 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const plane = new THREE.Mesh(geometry, material);
       plane.position.copy(position);
-      plane.lookAt(position.clone().add(normal)); // Ensure correct orientation
+      plane.lookAt(position.clone().add(normal));
       scene.add(plane);
     };
 
     controller.addEventListener("select", () => {
       if (reticle.visible) {
-        const position = new THREE.Vector3();
-        const normal = new THREE.Vector3(0, 1, 0);
-
-        position.setFromMatrixPosition(reticle.matrix);
-        normal.set(
+        const position = new THREE.Vector3().setFromMatrixPosition(
+          reticle.matrix
+        );
+        const normal = new THREE.Vector3(
           reticle.matrix.elements[4],
           reticle.matrix.elements[5],
           reticle.matrix.elements[6]
-        ); // Extract normal
-
+        );
         createSurface(position, normal);
       }
     });
 
-    renderer.xr.addEventListener("sessionstart", async () => {
+    renderer.setAnimationLoop((timestamp, frame) => {
+      if (!frame) return;
+
       const session = renderer.xr.getSession();
-      const referenceSpace = await session.requestReferenceSpace("viewer");
-      const hitTestSource = await session.requestHitTestSource({
-        space: referenceSpace,
-      });
+      if (!session) return;
 
-      renderer.setAnimationLoop((timestamp, frame) => {
-        if (!frame) return;
+      if (!hitTestSourceRequested) {
+        session.requestReferenceSpace("viewer").then((referenceSpace) => {
+          session
+            .requestHitTestSource({ space: referenceSpace })
+            .then((source) => {
+              hitTestSource = source;
+            });
+        });
+        hitTestSourceRequested = true;
+      }
 
+      if (hitTestSource) {
         const hitTestResults = frame.getHitTestResults(hitTestSource);
-        if (hitTestResults.length) {
+        if (hitTestResults.length > 0) {
           const hit = hitTestResults[0];
-          const hitPose = hit.getPose(renderer.xr.getReferenceSpace());
-          const hitNormal = hit.results[0].normal || new THREE.Vector3(0, 1, 0); // Default to floor
+          const referenceSpace = renderer.xr.getReferenceSpace();
+          const hitPose = hit.getPose(referenceSpace);
 
           reticle.visible = true;
           reticle.matrix.fromArray(hitPose.transform.matrix);
         } else {
           reticle.visible = false;
         }
+      }
 
-        renderer.render(scene, camera);
-      });
+      renderer.render(scene, camera);
     });
 
     renderer.xr.addEventListener("sessionend", () => {
-      console.log("session end");
+      hitTestSourceRequested = false;
+      hitTestSource = null;
     });
   };
 
