@@ -13,7 +13,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const reticleGeometry = new THREE.RingGeometry(0.15, 0.2, 32).rotateX(
       -Math.PI / 2
     );
-    const reticleMaterial = new THREE.MeshBasicMaterial();
+    const reticleMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
     const reticle = new THREE.Mesh(reticleGeometry, reticleMaterial);
     reticle.matrixAutoUpdate = false;
     reticle.visible = false;
@@ -37,14 +37,29 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const loader = new GLTFLoader();
 
+    // Function to create a virtual surface
+    const createSurface = (position, rotation, color = 0x00ff00) => {
+      const geometry = new THREE.PlaneGeometry(2, 2);
+      const material = new THREE.MeshBasicMaterial({
+        color: color,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.6, // Adjust transparency
+      });
+      const plane = new THREE.Mesh(geometry, material);
+      plane.position.copy(position);
+      plane.rotation.set(rotation.x, rotation.y, rotation.z);
+      scene.add(plane);
+    };
+
     // Function to load and place the model
     const loadModel = (position) => {
       loader.load(
-        "./models/storage_bench.glb", // Update with the correct model path
+        "./models/storage_bench.glb",
         (gltf) => {
           const model = gltf.scene;
           model.position.copy(position);
-          model.scale.set(0.08, 0.08, 0.08); // Adjust scale as needed
+          model.scale.set(0.08, 0.08, 0.08);
           scene.add(model);
         },
         undefined,
@@ -56,7 +71,15 @@ document.addEventListener("DOMContentLoaded", () => {
       if (reticle.visible) {
         const position = new THREE.Vector3();
         position.setFromMatrixPosition(reticle.matrix);
-        loadModel(position);
+
+        // Load a model OR create a virtual floor/wall
+        createSurface(
+          position,
+          new THREE.Vector3(-Math.PI / 2, 0, 0),
+          0x0000ff
+        ); // Blue floor
+
+        loadModel(position); // Optional: Place model too
       }
     });
 
