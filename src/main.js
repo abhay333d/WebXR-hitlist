@@ -37,70 +37,67 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const loader = new GLTFLoader();
 
-    // Function to create a virtual surface
-    const createSurface = (position, rotation, color = 0x00ff00) => {
+    // Function to create a virtual surface (floor, wall, ceiling)
+    const createSurface = (position, normal) => {
+      let rotation = new THREE.Vector3();
+      let color;
+
+      // Determine the type of surface based on normal direction
+      if (Math.abs(normal.y) > 0.9) {
+        // Floor or Ceiling
+        rotation.set(-Math.PI / 2, 0, 0);
+        color = normal.y > 0 ? 0x00ff00 : 0xff0000; // Green for floor, Red for ceiling
+      } else {
+        // Walls (assuming mostly vertical)
+        rotation.set(0, Math.atan2(normal.x, normal.z), 0);
+        color = 0x0000ff; // Blue for walls
+      }
+
       const geometry = new THREE.PlaneGeometry(2, 2);
       const material = new THREE.MeshBasicMaterial({
         color: color,
         side: THREE.DoubleSide,
         transparent: true,
-        opacity: 0.6, // Adjust transparency
+        opacity: 0.6,
       });
+
       const plane = new THREE.Mesh(geometry, material);
       plane.position.copy(position);
-      plane.rotation.set(rotation.x, rotation.y, rotation.z);
+      plane.lookAt(position.clone().add(normal)); // Ensure correct orientation
       scene.add(plane);
-    };
-
-    // Function to load and place the model
-    const loadModel = (position) => {
-      loader.load(
-        "./models/storage_bench.glb",
-        (gltf) => {
-          const model = gltf.scene;
-          model.position.copy(position);
-          model.scale.set(0.08, 0.08, 0.08);
-          scene.add(model);
-        },
-        undefined,
-        (error) => console.error("Error loading model:", error)
-      );
     };
 
     controller.addEventListener("select", () => {
       if (reticle.visible) {
         const position = new THREE.Vector3();
+        const normal = new THREE.Vector3(0, 1, 0);
+
         position.setFromMatrixPosition(reticle.matrix);
+        normal.set(
+          reticle.matrix.elements[4],
+          reticle.matrix.elements[5],
+          reticle.matrix.elements[6]
+        ); // Extract normal
 
-        // Load a model OR create a virtual floor/wall
-        createSurface(
-          position,
-          new THREE.Vector3(-Math.PI / 2, 0, 0),
-          0x0000ff
-        ); // Blue floor
-
-        loadModel(position); // Optional: Place model too
+        createSurface(position, normal);
       }
     });
 
     renderer.xr.addEventListener("sessionstart", async () => {
       const session = renderer.xr.getSession();
-      const viewerReferenceSpace = await session.requestReferenceSpace(
-        "viewer"
-      );
+      const referenceSpace = await session.requestReferenceSpace("viewer");
       const hitTestSource = await session.requestHitTestSource({
-        space: viewerReferenceSpace,
+        space: referenceSpace,
       });
 
       renderer.setAnimationLoop((timestamp, frame) => {
         if (!frame) return;
 
         const hitTestResults = frame.getHitTestResults(hitTestSource);
-
         if (hitTestResults.length) {
           const hit = hitTestResults[0];
-          const referenceSpace = renderer.xr.getReferenceSpace();
-          const hitPose = hit.getPose(referenceSpace);
+          const hitPose = hit.getPose(renderer.xr.getReferenceSpace());
+          const hitNormal = hit.results[0].normal || new THREE.Vector3(0, 1, 0); // Default to floor
 
           reticle.visible = true;
           reticle.matrix.fromArray(hitPose.transform.matrix);
