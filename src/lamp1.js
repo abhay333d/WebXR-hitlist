@@ -39,7 +39,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const loadModel = (position) => {
       loader.load(
-        "./models/floor_lamp.glb",
+        "../models/floor_lamp.glb",
         (gltf) => {
           const model = gltf.scene;
           model.position.copy(position);
